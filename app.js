@@ -697,8 +697,7 @@
       });
       lines.push("");
     });
-    return lines.join("
-");
+    return lines.join("\n");
   }
 
   function formatMultiMd(payload) {
@@ -709,16 +708,14 @@
     }
     payload.sections.forEach((sec) => {
       lines.push(`## ${sec.title}`, "");
-      lines.push(`| ${sec.headers.map((h) => String(h).replace(/\|/g, "\|")).join(" | ")} |`);
+      lines.push(`| ${sec.headers.map((h) => String(h).replace(/\|/g, "\\|")).join(" | ")} |`);
       lines.push(`| ${sec.headers.map(() => "---").join(" | ")} |`);
       sec.rows.forEach((r) => {
-        lines.push(`| ${r.map((val) => String(val || "").replace(/?
-/g, " ").replace(/\|/g, "\|")).join(" | ")} |`);
+        lines.push(`| ${r.map((val) => String(val || "").replace(/\r?\n/g, " ").replace(/\|/g, "\\|")).join(" | ")} |`);
       });
       lines.push("");
     });
-    return lines.join("
-");
+    return lines.join("\n");
   }
 
   function formatMultiWordHtml(payload) {
@@ -734,8 +731,7 @@
               `<tr>${r
                 .map(
                   (val) =>
-                    `<td style="border:1px solid #cbd5e1;padding:6px;vertical-align:top;">${escapeHtml(val || "").replace(/?
-/g, "<br/>")}</td>`
+                    `<td style="border:1px solid #cbd5e1;padding:6px;vertical-align:top;">${escapeHtml(val || "").replace(/\r?\n/g, "<br/>")}</td>`
                 )
                 .join("")}</tr>`
           )
@@ -840,9 +836,7 @@
       const pageStr = content.items.map((it) => it.str || "").join(" ").trim();
       if (pageStr) chunks.push(`[Trang ${p}] ${pageStr}`);
     }
-    return chunks.join("
-
-");
+    return chunks.join("\n\n");
   }
 
   async function extractTextFromDocxBuffer(arrayBuffer) {
@@ -860,9 +854,7 @@
     for (const sName of wb.sheetNames) {
       const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[sName], { defval: "" });
       if (!rows.length) continue;
-      parts.push(`[Sheet: ${sName}] (${rows.length} dòng)
-` + rows.slice(0, 20).map((r) => JSON.stringify(r)).join("
-"));
+      parts.push(`[Sheet: ${sName}] (${rows.length} dòng)\n` + rows.slice(0, 20).map((r) => JSON.stringify(r)).join("\n"));
       rows.slice(0, 40).forEach((r, i) => {
         const vals = Object.values(r);
         matrixAddition.push({
@@ -878,9 +870,7 @@
     if (matrixAddition.length) {
       state.matrixRows = [...matrixAddition, ...state.matrixRows];
     }
-    return parts.join("
-
-");
+    return parts.join("\n\n");
   }
 
   async function ingestBufferByName(arrayBuffer, name, targetFor20Steps) {
@@ -914,9 +904,7 @@
     }
 
     const cleaned = String(extracted || "").trim();
-    const block = `
---- [Nguồn: ${name}] ---
-${cleaned.slice(0, 6000)}`;
+    const block = `\n--- [Nguồn: ${name}] ---\n${cleaned.slice(0, 6000)}`;
     state.customInputText = `${state.customInputText}${block}`.trim();
     if (els.customDataTextarea) els.customDataTextarea.value = state.customInputText;
     saveState();
@@ -984,9 +972,7 @@ ${cleaned.slice(0, 6000)}`;
         await ingestBufferByName(buf, urlPath, true);
       } else {
         const txt = await res.text();
-        const block = `
---- [Link online: ${rawUrl}] ---
-${txt.slice(0, 6000)}`;
+        const block = `\n--- [Link online: ${rawUrl}] ---\n${txt.slice(0, 6000)}`;
         state.customInputText = `${state.customInputText}${block}`.trim();
         if (els.customDataTextarea) els.customDataTextarea.value = state.customInputText;
         saveState();
@@ -1002,8 +988,7 @@ ${txt.slice(0, 6000)}`;
   }
 
   function parseCsvSimple(csvText) {
-    const lines = String(csvText || "").split(/?
-/).filter((l) => l.trim());
+    const lines = String(csvText || "").split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) return [];
     const splitLine = (line) => {
       const out = [];
@@ -1107,9 +1092,7 @@ ${txt.slice(0, 6000)}`;
       }
 
       if (notes.length) {
-        state.customInputText = `${state.customInputText}
-${notes.join("
-")}`.trim();
+        state.customInputText = `${state.customInputText}\n${notes.join("\n")}`.trim();
         if (els.customDataTextarea) els.customDataTextarea.value = state.customInputText;
       }
 
@@ -1138,29 +1121,17 @@ ${notes.join("
     const rq = state.rq.trim() || "[Chưa nhập RQ / Mục tiêu trọng tâm]";
     const ctx = state.context.trim() || "[Chưa nhập bối cảnh / dữ liệu]";
     const extraData = state.customInputText.trim() || "Sử dụng dữ liệu nền tảng đã nạp trực tiếp trong Workbench.";
-    const matchedRows = state.matrixRows.slice(0, 5).map((r) => `- ${r.author}: ${r.goal} (${r.method})`).join("
-");
+    const matchedRows = state.matrixRows.slice(0, 5).map((r) => `- ${r.author}: ${r.goal} (${r.method})`).join("\n");
 
     return (
-      `[Thực thi Bước ${stepIdx + 1}/20 — ${stepText}]
-` +
-      `Chủ đề/Đề tài: ${topic}
-` +
-      `RQ / Mục tiêu: ${rq}
-` +
-      `Bối cảnh & Dữ liệu: ${ctx}
-` +
-      `Dữ liệu nạp thêm:
-${extraData.slice(0, 1200)}
-` +
-      `Tài liệu tham khảo liên quan trong LR Matrix:
-${matchedRows}
-
-` +
-      `Yêu cầu đầu ra:
-` +
-      `1. Phân tích & hoàn thành trực tiếp nội dung của Bước ${stepIdx + 1} cho đề tài trên (phân biệt rõ dữ kiện xác minh, suy luận, giả thuyết, không bịa nguồn/số liệu).
-` +
+      `[Thực thi Bước ${stepIdx + 1}/20 — ${stepText}]\n` +
+      `Chủ đề/Đề tài: ${topic}\n` +
+      `RQ / Mục tiêu: ${rq}\n` +
+      `Bối cảnh & Dữ liệu: ${ctx}\n` +
+      `Dữ liệu nạp thêm:\n${extraData.slice(0, 1200)}\n` +
+      `Tài liệu tham khảo liên quan trong LR Matrix:\n${matchedRows}\n\n` +
+      `Yêu cầu đầu ra:\n` +
+      `1. Phân tích & hoàn thành trực tiếp nội dung của Bước ${stepIdx + 1} cho đề tài trên (phân biệt rõ dữ kiện xác minh, suy luận, giả thuyết, không bịa nguồn/số liệu).\n` +
       `2. Cung cấp bảng/khung/checklist hoặc ví dụ áp dụng cụ thể để dán ngay vào bản thảo nghiên cứu/báo cáo.`
     );
   }
@@ -1177,8 +1148,7 @@ ${matchedRows}
     for (let i = 0; i < 20; i++) {
       const out = generateStepOutput(i);
       state.stepOutputs[i] = out;
-      outputs.push(`=== BƯỚC ${i + 1}: ${state.steps20[i]} ===
-${out}`);
+      outputs.push(`=== BƯỚC ${i + 1}: ${state.steps20[i]} ===\n${out}`);
     }
     saveState();
     renderSteps();
@@ -1189,15 +1159,11 @@ ${out}`);
           <span class="item-title">Kết quả chạy tự động toàn bộ 20 bước (Đề tài: ${escapeHtml(state.topic.trim() || "Chưa đặt tên")})</span>
           <button type="button" class="btn-copy" id="copyAll20OutputsBtn">Copy toàn bộ 20 bước đã chạy</button>
         </div>
-        <pre class="prompt-pre">${escapeHtml(outputs.join("
-
-"))}</pre>
+        <pre class="prompt-pre">${escapeHtml(outputs.join("\n\n"))}</pre>
       `;
       const copyBtn = document.getElementById("copyAll20OutputsBtn");
       if (copyBtn) {
-        copyBtn.addEventListener("click", () => copyText(outputs.join("
-
-"), "Pipeline 20 bước tự động"));
+        copyBtn.addEventListener("click", () => copyText(outputs.join("\n\n"), "Pipeline 20 bước tự động"));
       }
     }
     setActiveTab("handbook");
@@ -1342,98 +1308,74 @@ ${out}`);
       {
         title: "1. Khung đề cương, biến số & phương pháp",
         baseBody:
-          "Đóng vai cố vấn học thuật & chuyên gia ngành.
-" +
-          "Đề tài / Bài toán: [Tên đề tài / bài toán]
-" +
-          "Câu hỏi / Mục tiêu: [Câu hỏi nghiên cứu / mục tiêu]
-" +
-          "Bối cảnh & Dữ liệu: [Bối cảnh / dữ liệu]
-" +
+          "Đóng vai cố vấn học thuật & chuyên gia ngành.\n" +
+          "Đề tài / Bài toán: [Tên đề tài / bài toán]\n" +
+          "Câu hỏi / Mục tiêu: [Câu hỏi nghiên cứu / mục tiêu]\n" +
+          "Bối cảnh & Dữ liệu: [Bối cảnh / dữ liệu]\n" +
           "Hãy đề xuất: (1) Khoảng trống nghiên cứu hoặc điểm nghẽn thực tế, (2) Khung đề cương chi tiết, (3) Bảng biến/chỉ tiêu (tên, ký hiệu, thang đo/công thức, kỳ vọng dấu), (4) Phương pháp phân tích/kiểm định.",
         boundBody:
-          `Đóng vai cố vấn học thuật & chuyên gia ngành.
-` +
-          `Đề tài / Bài toán: ${topic}
-` +
-          `Câu hỏi / Mục tiêu: ${rq || "Xác định nhân tố tác động, cơ chế truyền dẫn và hàm ý thực tiễn"}
-` +
-          `Bối cảnh & Dữ liệu: ${ctx || "Theo bối cảnh và dữ liệu của đề tài"}
-` +
+          `Đóng vai cố vấn học thuật & chuyên gia ngành.\n` +
+          `Đề tài / Bài toán: ${topic}\n` +
+          `Câu hỏi / Mục tiêu: ${rq || "Xác định nhân tố tác động, cơ chế truyền dẫn và hàm ý thực tiễn"}\n` +
+          `Bối cảnh & Dữ liệu: ${ctx || "Theo bối cảnh và dữ liệu của đề tài"}\n` +
           `Hãy đề xuất: (1) Khoảng trống nghiên cứu hoặc điểm nghẽn thực tế, (2) Khung đề cương chi tiết, (3) Bảng biến/chỉ tiêu (tên, ký hiệu, thang đo/công thức, kỳ vọng dấu), (4) Phương pháp phân tích/kiểm định.`
       },
       {
         title: "2. Tổng hợp LR Matrix & Gap Matrix",
         baseBody:
-          "Dựa CHỈ trên các tài liệu/dữ liệu đã nạp cho chủ đề [Tên đề tài], lập bảng tổng hợp gồm:
-" +
-          "Tác giả (Năm) | Bối cảnh & Dữ liệu | Mô hình / Phương pháp | Biến/Chỉ tiêu chính | Kết quả chính | Hạn chế / Khoảng trống.
-" +
+          "Dựa CHỈ trên các tài liệu/dữ liệu đã nạp cho chủ đề [Tên đề tài], lập bảng tổng hợp gồm:\n" +
+          "Tác giả (Năm) | Bối cảnh & Dữ liệu | Mô hình / Phương pháp | Biến/Chỉ tiêu chính | Kết quả chính | Hạn chế / Khoảng trống.\n" +
           "Phân biệt rõ: bằng chứng đã xác minh, suy luận của tác giả, gap do tác giả nêu và gap do suy luận; chỉ ra điểm đồng thuận, tranh luận và bằng chứng phản biện.",
         boundBody:
-          `Dựa CHỈ trên các tài liệu/dữ liệu đã nạp cho chủ đề "${topic}", lập bảng tổng hợp gồm:
-` +
-          `Tác giả (Năm) | Bối cảnh & Dữ liệu | Mô hình / Phương pháp | Biến/Chỉ tiêu chính | Kết quả chính | Hạn chế / Khoảng trống.
-` +
+          `Dựa CHỈ trên các tài liệu/dữ liệu đã nạp cho chủ đề "${topic}", lập bảng tổng hợp gồm:\n` +
+          `Tác giả (Năm) | Bối cảnh & Dữ liệu | Mô hình / Phương pháp | Biến/Chỉ tiêu chính | Kết quả chính | Hạn chế / Khoảng trống.\n` +
           `Phân biệt rõ: bằng chứng đã xác minh, suy luận của tác giả, gap do tác giả nêu và gap do suy luận; chỉ ra điểm đồng thuận, tranh luận và bằng chứng phản biện.`
       },
       {
         title: "3. Tóm tắt tài liệu chuẩn hóa (Tên, Biến, Lý thuyết, Phương pháp, Kết quả, Hạn chế)",
         baseBody:
-          "Tóm tắt chi tiết tài liệu sau theo cấu trúc: Tên nghiên cứu [Tiếng Anh (Tiếng Việt)]; Tác giả; Quốc gia; Biến độc lập/trung gian/điều tiết/phụ thuộc (kèm kích thước nếu có); Lý thuyết nền & vai trò; Phương pháp (Khảo sát | Lấy mẫu | Phân tích dữ liệu); Đóng góp/Kết quả (giữ nguyên tên biến tiếng Anh); Hạn chế/Hướng nghiên cứu tương lai (bullet bắt đầu bằng đề mục ngắn gọn):
-[Dán nội dung tài liệu vào đây]",
+          "Tóm tắt chi tiết tài liệu sau theo cấu trúc: Tên nghiên cứu [Tiếng Anh (Tiếng Việt)]; Tác giả; Quốc gia; Biến độc lập/trung gian/điều tiết/phụ thuộc (kèm kích thước nếu có); Lý thuyết nền & vai trò; Phương pháp (Khảo sát | Lấy mẫu | Phân tích dữ liệu); Đóng góp/Kết quả (giữ nguyên tên biến tiếng Anh); Hạn chế/Hướng nghiên cứu tương lai (bullet bắt đầu bằng đề mục ngắn gọn):\n[Dán nội dung tài liệu vào đây]",
         boundBody:
-          `Tóm tắt chi tiết tài liệu sau phục vụ đề tài "${topic}" theo cấu trúc: Tên nghiên cứu [Tiếng Anh (Tiếng Việt)]; Tác giả; Quốc gia; Biến độc lập/trung gian/điều tiết/phụ thuộc (kèm kích thước nếu có); Lý thuyết nền & vai trò; Phương pháp (Khảo sát | Lấy mẫu | Phân tích dữ liệu); Đóng góp/Kết quả (giữ nguyên tên biến tiếng Anh); Hạn chế/Hướng nghiên cứu tương lai (bullet bắt đầu bằng đề mục ngắn gọn):
-${extra || "[Chưa dán thêm nội dung tài liệu — dùng corpus/dữ liệu đang nạp]"}`
+          `Tóm tắt chi tiết tài liệu sau phục vụ đề tài "${topic}" theo cấu trúc: Tên nghiên cứu [Tiếng Anh (Tiếng Việt)]; Tác giả; Quốc gia; Biến độc lập/trung gian/điều tiết/phụ thuộc (kèm kích thước nếu có); Lý thuyết nền & vai trò; Phương pháp (Khảo sát | Lấy mẫu | Phân tích dữ liệu); Đóng góp/Kết quả (giữ nguyên tên biến tiếng Anh); Hạn chế/Hướng nghiên cứu tương lai (bullet bắt đầu bằng đề mục ngắn gọn):\n${extra || "[Chưa dán thêm nội dung tài liệu — dùng corpus/dữ liệu đang nạp]"}`
       },
       {
         title: "4. Học có hướng dẫn từng bước (Socratic / Guided Learning)",
         baseBody:
-          "Đóng vai gia sư đại học, hướng dẫn tôi hiểu sâu chủ đề [Tên chủ đề / khái niệm] theo phương pháp học có hướng dẫn.
-" +
+          "Đóng vai gia sư đại học, hướng dẫn tôi hiểu sâu chủ đề [Tên chủ đề / khái niệm] theo phương pháp học có hướng dẫn.\n" +
           "Không giải toàn bộ ngay từ đầu; hãy hỏi tôi 2–3 câu hỏi kiểm tra hiểu biết trước, gợi ý khi tôi trả lời chưa đủ để tôi tự sửa, rồi mới chốt khái niệm và phân biệt các khía cạnh cốt lõi.",
         boundBody:
-          `Đóng vai gia sư đại học, hướng dẫn tôi hiểu sâu đề tài/chủ đề "${topic}"${rq ? ` (RQ: ${rq})` : ""} theo phương pháp học có hướng dẫn.
-` +
+          `Đóng vai gia sư đại học, hướng dẫn tôi hiểu sâu đề tài/chủ đề "${topic}"${rq ? ` (RQ: ${rq})` : ""} theo phương pháp học có hướng dẫn.\n` +
           `Không giải toàn bộ ngay từ đầu; hãy hỏi tôi 2–3 câu hỏi kiểm tra hiểu biết trước, gợi ý khi tôi trả lời chưa đủ để tôi tự sửa, rồi mới chốt khái niệm và phân biệt các khía cạnh cốt lõi.`
       },
       {
         title: "5. Xây dựng tài liệu học tập & 10 câu hỏi tự kiểm tra",
         baseBody:
-          "Dựa hoàn toàn trên tài liệu/dữ liệu sau, biên soạn tài liệu học tập gồm: (1) Mục tiêu học tập; (2) 5 kiến thức trọng tâm & lý do quan trọng; (3) Giải thích khái niệm khó + ví dụ; (4) Hệ thống hóa kiến thức; (5) 10 câu hỏi tự kiểm tra độ khó tăng dần (chưa cung cấp đáp án):
-[Dán nội dung chương/tài liệu vào đây]",
+          "Dựa hoàn toàn trên tài liệu/dữ liệu sau, biên soạn tài liệu học tập gồm: (1) Mục tiêu học tập; (2) 5 kiến thức trọng tâm & lý do quan trọng; (3) Giải thích khái niệm khó + ví dụ; (4) Hệ thống hóa kiến thức; (5) 10 câu hỏi tự kiểm tra độ khó tăng dần (chưa cung cấp đáp án):\n[Dán nội dung chương/tài liệu vào đây]",
         boundBody:
-          `Dựa hoàn toàn trên tài liệu/dữ liệu sau cho đề tài/chủ đề "${topic}", biên soạn tài liệu học tập gồm: (1) Mục tiêu học tập; (2) 5 kiến thức trọng tâm & lý do quan trọng; (3) Giải thích khái niệm khó + ví dụ; (4) Hệ thống hóa kiến thức; (5) 10 câu hỏi tự kiểm tra độ khó tăng dần (chưa cung cấp đáp án):
-${extra || "[Chưa dán thêm nội dung chương/tài liệu]"}`
+          `Dựa hoàn toàn trên tài liệu/dữ liệu sau cho đề tài/chủ đề "${topic}", biên soạn tài liệu học tập gồm: (1) Mục tiêu học tập; (2) 5 kiến thức trọng tâm & lý do quan trọng; (3) Giải thích khái niệm khó + ví dụ; (4) Hệ thống hóa kiến thức; (5) 10 câu hỏi tự kiểm tra độ khó tăng dần (chưa cung cấp đáp án):\n${extra || "[Chưa dán thêm nội dung chương/tài liệu]"}`
       },
       {
         title: "6. Dịch thuật ngữ học thuật Anh–Việt giữ nguyên cấu trúc",
         baseBody:
-          "Là chuyên gia ngôn ngữ Anh và nghiên cứu AI, hãy dịch chính xác đoạn văn sau cho bài báo khoa học, giữ nguyên cấu trúc câu văn, ngữ nghĩa và bối cảnh học thuật, diễn đạt tự nhiên:
-[Dán đoạn văn cần dịch vào đây]",
+          "Là chuyên gia ngôn ngữ Anh và nghiên cứu AI, hãy dịch chính xác đoạn văn sau cho bài báo khoa học, giữ nguyên cấu trúc câu văn, ngữ nghĩa và bối cảnh học thuật, diễn đạt tự nhiên:\n[Dán đoạn văn cần dịch vào đây]",
         boundBody:
-          `Là chuyên gia ngôn ngữ Anh và nghiên cứu AI, hãy dịch chính xác đoạn văn sau cho bài báo khoa học về đề tài "${topic}", giữ nguyên cấu trúc câu văn, ngữ nghĩa và bối cảnh học thuật, diễn đạt tự nhiên:
-${extra || "[Chưa dán đoạn văn cần dịch]"}`
+          `Là chuyên gia ngôn ngữ Anh và nghiên cứu AI, hãy dịch chính xác đoạn văn sau cho bài báo khoa học về đề tài "${topic}", giữ nguyên cấu trúc câu văn, ngữ nghĩa và bối cảnh học thuật, diễn đạt tự nhiên:\n${extra || "[Chưa dán đoạn văn cần dịch]"}`
       },
       {
         title: "7. Dàn ý bộ Slide hội thảo khoa học (12–15 slide, ~10 phút)",
         baseBody:
-          "Chuyển nghiên cứu/bài toán [Tên đề tài] thành bộ slide hội thảo 12–15 slide (~10 phút), tối giản chữ (mỗi slide ~30–40 từ, ưu tiên sơ đồ/biểu đồ/bảng).
-" +
+          "Chuyển nghiên cứu/bài toán [Tên đề tài] thành bộ slide hội thảo 12–15 slide (~10 phút), tối giản chữ (mỗi slide ~30–40 từ, ưu tiên sơ đồ/biểu đồ/bảng).\n" +
           "Mỗi slide trình bày theo: SLIDE X — [Tên slide] | Objective | Main content | Suggested visual/graphic | Suggested layout | Presenter speaking notes (1–2 câu) | Estimated speaking time.",
         boundBody:
-          `Chuyển nghiên cứu/bài toán "${topic}" thành bộ slide hội thảo 12–15 slide (~10 phút), tối giản chữ (mỗi slide ~30–40 từ, ưu tiên sơ đồ/biểu đồ/bảng).
-` +
+          `Chuyển nghiên cứu/bài toán "${topic}" thành bộ slide hội thảo 12–15 slide (~10 phút), tối giản chữ (mỗi slide ~30–40 từ, ưu tiên sơ đồ/biểu đồ/bảng).\n` +
           `Mỗi slide trình bày theo: SLIDE X — [Tên slide] | Objective | Main content | Suggested visual/graphic | Suggested layout | Presenter speaking notes (1–2 câu) | Estimated speaking time.`
       },
       {
         title: "8. Chuẩn hóa trích dẫn (APA / IEEE / Footnote) & Kiểm soát Turnitin",
         baseBody:
-          "Áp dụng chuẩn trích dẫn (APA: tên tác giả Việt Nam dùng tên gọi, xếp alphabet; IEEE: [1] theo thứ tự xuất hiện; Footnote cuối trang) và quy tắc kiểm soát trùng lặp/Turnitin (ưu tiên trích dẫn gián tiếp, tóm tắt đại ý kết hợp đổi cấu trúc câu, kiểm tra miễn trừ Quotes/Bibliography, không chèn ký tự lạ/ẩn):
-[Dán nội dung cần kiểm tra/chuẩn hóa vào đây]",
+          "Áp dụng chuẩn trích dẫn (APA: tên tác giả Việt Nam dùng tên gọi, xếp alphabet; IEEE: [1] theo thứ tự xuất hiện; Footnote cuối trang) và quy tắc kiểm soát trùng lặp/Turnitin (ưu tiên trích dẫn gián tiếp, tóm tắt đại ý kết hợp đổi cấu trúc câu, kiểm tra miễn trừ Quotes/Bibliography, không chèn ký tự lạ/ẩn):\n[Dán nội dung cần kiểm tra/chuẩn hóa vào đây]",
         boundBody:
-          `Áp dụng chuẩn trích dẫn (APA: tên tác giả Việt Nam dùng tên gọi, xếp alphabet; IEEE: [1] theo thứ tự xuất hiện; Footnote cuối trang) và quy tắc kiểm soát trùng lặp/Turnitin cho đề tài "${topic}" (ưu tiên trích dẫn gián tiếp, tóm tắt đại ý kết hợp đổi cấu trúc câu, kiểm tra miễn trừ Quotes/Bibliography, không chèn ký tự lạ/ẩn):
-${extra || "[Chưa dán nội dung cần kiểm tra/chuẩn hóa]"}`
+          `Áp dụng chuẩn trích dẫn (APA: tên tác giả Việt Nam dùng tên gọi, xếp alphabet; IEEE: [1] theo thứ tự xuất hiện; Footnote cuối trang) và quy tắc kiểm soát trùng lặp/Turnitin cho đề tài "${topic}" (ưu tiên trích dẫn gián tiếp, tóm tắt đại ý kết hợp đổi cấu trúc câu, kiểm tra miễn trừ Quotes/Bibliography, không chèn ký tự lạ/ẩn):\n${extra || "[Chưa dán nội dung cần kiểm tra/chuẩn hóa]"}`
       }
     ];
 
@@ -1690,13 +1632,8 @@ ${extra || "[Chưa dán nội dung cần kiểm tra/chuẩn hóa]"}`
         const item = (PRESETS[state.orientation] || []).find((p) => p.id === copyBtn.dataset.id);
         if (item) {
           const txt =
-            `${item.title}
-Đề tài/Chủ đề: ${item.topic}
-RQ/Mục tiêu: ${item.rq}
-` +
-            `Biến/Chỉ tiêu: ${item.variables}
-Phương pháp/Mô hình: ${item.method}
-Truy vấn: ${item.query}`;
+            `${item.title}\nĐề tài/Chủ đề: ${item.topic}\nRQ/Mục tiêu: ${item.rq}\n` +
+            `Biến/Chỉ tiêu: ${item.variables}\nPhương pháp/Mô hình: ${item.method}\nTruy vấn: ${item.query}`;
           copyText(txt, item.title);
         }
       }
@@ -1741,8 +1678,7 @@ Truy vấn: ${item.query}`;
 
   if (els.copyAllStepsBtn) {
     els.copyAllStepsBtn.addEventListener("click", () => {
-      const all = state.steps20.map((s, i) => `Bước ${i + 1}: ${s}`).join("
-");
+      const all = state.steps20.map((s, i) => `Bước ${i + 1}: ${s}`).join("\n");
       copyText(all, "Toàn bộ 20 bước");
     });
   }
@@ -1807,15 +1743,13 @@ Truy vấn: ${item.query}`;
         "Biến / Chỉ tiêu chính",
         "Phương pháp / Công cụ",
         "Kết quả & Khoảng trống / Ứng dụng"
-      ].join("	");
+      ].join("\t");
       const lines = state.matrixRows.map((r) =>
         [r.author, r.goal, r.vars, r.method, r.finding]
-          .map((v) => String(v || "").replace(/	|
-/g, " "))
-          .join("	")
+          .map((v) => String(v || "").replace(/\t|\n/g, " "))
+          .join("\t")
       );
-      copyText([header, ...lines].join("
-"), "Bảng LR Matrix");
+      copyText([header, ...lines].join("\n"), "Bảng LR Matrix");
     });
   }
 
@@ -1856,15 +1790,13 @@ Truy vấn: ${item.query}`;
         "Biến độc lập / Nhân tố tác động (X)",
         "Trung gian / Điều tiết / Kiểm soát (Med/Mod/Controls)",
         "Phương pháp & Thang đo gợi ý"
-      ].join("	");
+      ].join("\t");
       const lines = state.varRows.map((r) =>
         [r.meta, r.yVar, r.xVar, r.medModVar, r.methodScale]
-          .map((v) => String(v || "").replace(/	|
-/g, " "))
-          .join("	")
+          .map((v) => String(v || "").replace(/\t|\n/g, " "))
+          .join("\t")
       );
-      copyText([header, ...lines].join("
-"), "Khung biến / Chỉ tiêu");
+      copyText([header, ...lines].join("\n"), "Khung biến / Chỉ tiêu");
     });
   }
 
